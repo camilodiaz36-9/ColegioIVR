@@ -1,0 +1,116 @@
+[
+    {
+        "name": "marcelog/pagi",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/marcelog/PAGI.git",
+            "reference": "c72d50304716c60a8c016eaf2b0faf2fca72f46d"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/marcelog/PAGI/zipball/c72d50304716c60a8c016eaf2b0faf2fca72f46d",
+            "reference": "c72d50304716c60a8c016eaf2b0faf2fca72f46d",
+            "shasum": ""
+        },
+        "require": {
+            "php": ">=5.3.3",
+            "psr/log": ">= 1.0.0"
+        },
+        "require-dev": {
+            "codeclimate/php-test-reporter": "0.3.0",
+            "evert/phpdoc-md": "~0.1.1",
+            "monolog/monolog": "1.*",
+            "phing/phing": "2.*",
+            "phpdocumentor/phpdocumentor": "2.*",
+            "phpmd/phpmd": "2.*",
+            "phpunit/phpunit": "4.*",
+            "satooshi/php-coveralls": "1.0.1",
+            "sebastian/phpcpd": "*",
+            "squizlabs/php_codesniffer": "2.*"
+        },
+        "time": "2017-09-08T19:09:00+00:00",
+        "type": "library",
+        "installation-source": "dist",
+        "autoload": {
+            "psr-4": {
+                "PAGI\\": "src/PAGI"
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "Apache-2.0"
+        ],
+        "authors": [
+            {
+                "name": "Marcelo Gornstein",
+                "email": "marcelog@gmail.com",
+                "homepage": "http://marcelog.github.com/",
+                "role": "Developer"
+            }
+        ],
+        "description": "Asterisk Gateway Interface (AGI) client for PHP, suitable to make telephony applications using call flow nodes",
+        "homepage": "http://marcelog.github.com/PAGI",
+        "keywords": [
+            "agi",
+            "asterisk",
+            "call",
+            "client",
+            "flow",
+            "ivr",
+            "node",
+            "telephony",
+            "voip"
+        ]
+    },
+    {
+        "name": "psr/log",
+        "version": "1.0.2",
+        "version_normalized": "1.0.2.0",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/php-fig/log.git",
+            "reference": "4ebe3a8bf773a19edfe0a84b6585ba3d401b724d"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/php-fig/log/zipball/4ebe3a8bf773a19edfe0a84b6585ba3d401b724d",
+            "reference": "4ebe3a8bf773a19edfe0a84b6585ba3d401b724d",
+            "shasum": ""
+        },
+        "require": {
+            "php": ">=5.3.0"
+        },
+        "time": "2016-10-10T12:19:37+00:00",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "1.0.x-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-4": {
+                "Psr\\Log\\": "Psr/Log/"
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "PHP-FIG",
+                "homepage": "http://www.php-fig.org/"
+            }
+        ],
+        "description": "Common interface for logging libraries",
+        "homepage": "https://github.com/php-fig/log",
+        "keywords": [
+            "log",
+            "psr",
+            "psr-3"
+        ]
+    }
+]
