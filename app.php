@@ -3,17 +3,26 @@
 require_once 'vendor/autoload.php';
 use PAGI\Client\Impl\ClientImpl as PagiClient;
 
+//Inicializar variables
+$idEstudiante = 0;
+$idTramite = 0;
+
+//Obtner instancia de cliente PAGI
 $pagiClientOptions = array();
 $pagiClient = PagiClient::getInstance($pagiClientOptions);
+
+//Conectar a BD
+$mysqli = new mysqli('ivrproduccion.ccltyawugee2.us-east-2.rds.amazonaws.com', 'awsrdsmysql', 'awsmysql123456', 'colegio', '3306');
+
 //Se responde la llamada
 $pagiClient->answer();
+
 //Se saluda y se le avisa al usuario que se le va a mostrar el menú
 $pagiClient->streamFile("Principal","#");
 
-$mysqli = new mysqli('ivrproduccion.ccltyawugee2.us-east-2.rds.amazonaws.com', 'awsrdsmysql', 'awsmysql123456', 'colegio', '3306');
-
+//Empieza el menú
 $bool1 = true;
-$result1 = $pagiClient->getOption("1", "1", 1500);	
+$result1 = $pagiClient->getOption("1", "1", 1500); //Rectoría
 
 if($result1->isTimeout()) {
 	$bool1 = true;
@@ -23,7 +32,7 @@ if($result1->isTimeout()) {
 
 if($bool1) {
 	$bool2 = true;
-	$result2 = $pagiClient->getOption("2", "2", 1500);
+	$result2 = $pagiClient->getOption("2", "2", 1500); //Secretaría
 	
 	if($result2->isTimeout()) {
 		$bool2 = true;
@@ -33,7 +42,7 @@ if($bool1) {
 
 	if($bool2) {
 		$bool3 = true;
-		$result3 = $pagiClient->getOption("3", "3", 1500);
+		$result3 = $pagiClient->getOption("3", "3", 1500); //Coordinación Académica
 		
 		if($result3->isTimeout()) {
 			$bool3 = true;
@@ -43,7 +52,7 @@ if($bool1) {
 
 		if($bool3) {
 			$bool4 = true;
-			$result4 = $pagiClient->getOption("4", "4", 1500);
+			$result4 = $pagiClient->getOption("4", "4", 1500); //Coordinación de Disciplina
 			
 			if($result4->isTimeout()) {
 				$bool4 = true;
@@ -53,7 +62,7 @@ if($bool1) {
 
 			if($bool4) {
 				$bool5 = true;
-				$result5 = $pagiClient->getOption("5", "5", 1500);
+				$result5 = $pagiClient->getOption("5", "5", 1500); //Biblioteca
 				
 				if($result5->isTimeout()) {
 					$bool5 = true;
@@ -63,7 +72,7 @@ if($bool1) {
 
 				if($bool5) {
 					$bool6 = true;
-					$result6 = $pagiClient->getOption("6", "6", 1500);
+					$result6 = $pagiClient->getOption("6", "6", 1500); //Tesorería
 					
 					if($result6->isTimeout()) {
 						$bool6 = true;
@@ -72,7 +81,7 @@ if($bool1) {
 					}
 
 					if(!$bool6) {
-						$result61 = $pagiClient->getOption("61", "1", 1500);
+						$result61 = $pagiClient->getOption("61", "1", 1500); 
 
 						if($result61->isTimeout()) {
 							
@@ -85,7 +94,7 @@ if($bool1) {
 								//Misma lógica, opción 2-3
 							}
 						} else {
-							//opción 6-1
+							//Opción 6-1
 							//Pedir documento, consultar deudas.
 							//Si tiene mostrarle el detalle de cada una: Concepto, costo, fecha de pago
 							//Si no, decirle que no tiene deudas y salir
@@ -231,7 +240,7 @@ if($bool1) {
 						$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
 					} else {
 						//Se encontró al estudiante en el tercer intento, pedir id de pago
-						$result = $pagiClient->getData("PaymentId", 5000, 6); //Crear archivo de constantes
+						$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 						$paymentId = $result->getDigits();
 						$sql = "select * from pago where numeroReferencia = " . $paymentId;
 						$resultado = $mysqli->query($sql);
@@ -239,7 +248,7 @@ if($bool1) {
 						if($resultado->num_rows === 0) {
 							//2do intento id de pago
 							$pagiClient->streamFile("ValidationFail","#");
-							$result = $pagiClient->getData("PaymentId", 5000, 6); //Crear archivo de constantes
+							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 							$paymentId = $result->getDigits();
 							$sql = "select * from pago where numeroReferencia = " . $paymentId;
 							$resultado = $mysqli->query($sql);
@@ -247,7 +256,7 @@ if($bool1) {
 							if($resultado->num_rows === 0) {
 								//3er intento id de pago
 								$pagiClient->streamFile("ValidationFail","#");
-								$result = $pagiClient->getData("PaymentId", 5000, 6); //Crear archivo de constantes
+								$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 								$paymentId = $result->getDigits();
 								$sql = "select * from pago where numeroReferencia = " . $paymentId;
 								$resultado = $mysqli->query($sql);
@@ -256,23 +265,29 @@ if($bool1) {
 									$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
 								} else {
 									//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
-									
+									$sql = "insert into solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite) values(CURRENT_TIMESTAMP, NOW + INTERVAL 1 DAY, " .  . ", " .  . ")";
+
+									$resultado = $mysqli->query($sql);
+
+
 								}
 							} else {
 								//Se encontró el ID de Pago en el 2do intento, generar solicitud de certificado.
+								$pagiClient->sayPhonetic("RB");
 							}
 						} else {
 							//Se encontró el ID de Pago en el 1er intento, generar solicitud de certificado.
+							$pagiClient->sayPhonetic("RA");
 						}
 					}
 				} else {
 					//Se encontró al estudiante en el segundo intento
-					$pagiClient->sayPhonetic("R");
+					$pagiClient->sayPhonetic("RBB");
 
 				}
 			} else {
 				//Se encontró el estudiante en el primer intento
-				$pagiClient->sayPhonetic("R");
+				$pagiClient->sayPhonetic("RAA");
 
 			}
 
@@ -283,13 +298,26 @@ if($bool1) {
 	//Decirle al usuario que se va a redirigir su llamada al rector
 	$pagiClient->streamFile("11", "#");
 	$sql = "select e.numero as NumeroExtension from usuario u inner join rol r on r.idRol = u.Rol_idRol inner join extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Rector'";
+	if($mysqli->connect_errno){
 
-	$resultado = $mysqli->query($sql);
-	$extension = $resultado->fetch_assoc();
-
-	//TODO: Cambiar a redirección a la extensión del rector, configurar cuenta SIP y demás cosas.
-	$pagiClient->sayPhonetic($extension['NumeroExtension']);
-
+		$pagiClient->consoleLog($mysqli->connect_errno);
+		$pagiClient->consoleLog($mysqli->connect_error);
+		$pagiClient->streamFile("ErrorBD","#");
+		$pagiClient->streamFile("Bye","#");
+	} else {
+		$resultado = $mysqli->query($sql);
+		if(!$resultado){
+			$pagiClient->streamFile("ErrorBD","#");
+			$pagiClient->streamFile("Bye","#");
+		} else {
+			$extension = $resultado->fetch_assoc();
+			$pagiClient->sayPhonetic($extension['NumeroExtension']);	
+		}
+		
+		$resultado->free();
+		$mysqli->close();
+	}
+	$mysqli->close();
 }
 
 
