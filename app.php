@@ -279,35 +279,35 @@ if($bool1) {
 								} else {
 									//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
 									
-									$pagiClient->sayPhonetic("R1");
+									//Se va a buscar el id del estudiante.
 									$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
 									$resultado = $mysqli->query($sql);
 									$estudiante = $resultado->fetch_assoc();
 									$idEstudiante = $estudiante['idEstudiante'];
-									$pagiClient->sayPhonetic($idEstudiante);
-									$pagiClient->consoleLog("Consultó el estudiante");
 
+									//Se va a buscar el id del trámite.
 									$sql = "select idTramite from Tramite where sigla = 'CE'";
 									$resultado = $mysqli->query($sql);
 									$tramite = $resultado->fetch_assoc();
 									$idTramite = $tramite['idTramite'];
-									$pagiClient->sayPhonetic($idTramite);
-									$pagiClient->consoleLog("Consultó el trámite");
 
+									//Se va a buscar el id del pago.
 									$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
 									$resultado = $mysqli->query($sql);
 									$pago = $resultado->fetch_assoc();
 									$idPago = $pago['idPago'];
-									$pagiClient->sayPhonetic($idPago);
-									$pagiClient->consoleLog("Consultó el pago");
 
+									//Se inserta la solicitud de certificado
 									$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
-
 									$resultado = $mysqli->query($sql);
+
 									if(!$resultado) {
-										$pagiClient->sayPhonetic("F");
+										//Falló la inserción de la solicitud de certificado, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
 									} else {
-										$pagiClient->sayPhonetic("RC");
+										//Inserción correcta.
+										$pagiClient->streamFile("Bye","#");
 									}
 								}
 							} else {
