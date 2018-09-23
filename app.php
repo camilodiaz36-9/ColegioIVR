@@ -6,13 +6,14 @@ use PAGI\Client\Impl\ClientImpl as PagiClient;
 //Inicializar variables
 $idEstudiante = 0;
 $idTramite = 0;
+$idPago = 0;
 
 //Obtner instancia de cliente PAGI
 $pagiClientOptions = array();
 $pagiClient = PagiClient::getInstance($pagiClientOptions);
 
 //Conectar a BD
-$mysqli = new mysqli('ivrproduccion.ccltyawugee2.us-east-2.rds.amazonaws.com', 'awsrdsmysql', 'awsmysql123456', 'colegio', '3306');
+$mysqli = new mysqli('ivrproduccion.ccltyawugee2.us-east-2.rds.amazonaws.com', 'awsrdsmysql', 'awsmysql123456', 'Colegio', '3306');
 
 //Se responde la llamada
 $pagiClient->answer();
@@ -217,59 +218,97 @@ if($bool1) {
 			//Si no existe, decirle que el estudiante no se encuentra, que verifique e intente otra vez.
 			//Si a la 2da no funciona decirle que no se encuentra, que verifique e intente otra vez.
 			//Si a la 3era no lo encuentra decirle que no se encuentra y salir
-
+			
 			$result = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
 			$docIdEst = $result->getDigits();
-			$sql = "select * from estudiante where numeroIdentificacion = " . $docIdEst;
+			$sql = "select * from Estudiante where numeroIdentificacion = " . $docIdEst;
+			$idEstudiante = $docIdEst;
 			$resultado = $mysqli->query($sql);
 			if($resultado->num_rows === 0) {
 				//No se encontró el estudiante, intentar otra vez
+				$idEstudiante = 0;
 				$pagiClient->streamFile("ValidationFail","#");
 				$result1 = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
 				$docIdEst1 = $result1->getDigits();
-				$sql1 = "select * from estudiante where numeroIdentificacion = " . $docIdEst1;
+				$sql1 = "select * from Estudiante where numeroIdentificacion = " . $docIdEst1;
+				$idEstudiante = $docIdEst1;
 				$resultado1 = $mysqli->query($sql1);
 				if($resultado1->num_rows === 0) {
 					//No se encontró el estudiante, intentar otra vez más.
+					$idEstudiante = 0;
 					$pagiClient->streamFile("ValidationFail","#");
 					$result2 = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
 					$docIdEst2 = $result2->getDigits();
-					$sql2 = "select * from estudiante where numeroIdentificacion = " . $docIdEst2;
+					$sql2 = "select * from Estudiante where numeroIdentificacion = " . $docIdEst2;
+					$idEstudiante = $docIdEst2;
 					$resultado2 = $mysqli->query($sql2);
 					if($resultado2->num_rows === 0) {
+						$idEstudiante = 0;
 						$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
 					} else {
 						//Se encontró al estudiante en el tercer intento, pedir id de pago
 						$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 						$paymentId = $result->getDigits();
-						$sql = "select * from pago where numeroReferencia = " . $paymentId;
+						$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+						$idPago = $paymentId;
 						$resultado = $mysqli->query($sql);
 
 						if($resultado->num_rows === 0) {
 							//2do intento id de pago
+							$idPago = 0;
 							$pagiClient->streamFile("ValidationFail","#");
 							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 							$paymentId = $result->getDigits();
-							$sql = "select * from pago where numeroReferencia = " . $paymentId;
+							$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+							$idPago = $paymentId;
 							$resultado = $mysqli->query($sql);
 
 							if($resultado->num_rows === 0) {
 								//3er intento id de pago
+								$idPago = 0;
 								$pagiClient->streamFile("ValidationFail","#");
 								$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 								$paymentId = $result->getDigits();
-								$sql = "select * from pago where numeroReferencia = " . $paymentId;
+								$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+								$idPago = $paymentId;
 								$resultado = $mysqli->query($sql);
 
 								if($resultado->num_rows === 0) {
+									$idPago = 0;
 									$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
 								} else {
 									//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
-									$sql = "insert into solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite) values(CURRENT_TIMESTAMP, NOW + INTERVAL 1 DAY, " .  . ", " .  . ")";
+									
+									$pagiClient->sayPhonetic("R1");
+									$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+									$resultado = $mysqli->query($sql);
+									$estudiante = $resultado->fetch_assoc();
+									$idEstudiante = $estudiante['idEstudiante'];
+									$pagiClient->sayPhonetic($idEstudiante);
+									$pagiClient->consoleLog("Consultó el estudiante");
+
+									$sql = "select idTramite from Tramite where sigla = 'CE'";
+									$resultado = $mysqli->query($sql);
+									$tramite = $resultado->fetch_assoc();
+									$idTramite = $tramite['idTramite'];
+									$pagiClient->sayPhonetic($idTramite);
+									$pagiClient->consoleLog("Consultó el trámite");
+
+									$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									$pago = $resultado->fetch_assoc();
+									$idPago = $pago['idPago'];
+									$pagiClient->sayPhonetic($idPago);
+									$pagiClient->consoleLog("Consultó el pago");
+
+									$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
 
 									$resultado = $mysqli->query($sql);
-
-
+									if(!$resultado) {
+										$pagiClient->sayPhonetic("F");
+									} else {
+										$pagiClient->sayPhonetic("RC");
+									}
 								}
 							} else {
 								//Se encontró el ID de Pago en el 2do intento, generar solicitud de certificado.
@@ -288,7 +327,6 @@ if($bool1) {
 			} else {
 				//Se encontró el estudiante en el primer intento
 				$pagiClient->sayPhonetic("RAA");
-
 			}
 
 		}
@@ -297,7 +335,7 @@ if($bool1) {
 } else {
 	//Decirle al usuario que se va a redirigir su llamada al rector
 	$pagiClient->streamFile("11", "#");
-	$sql = "select e.numero as NumeroExtension from usuario u inner join rol r on r.idRol = u.Rol_idRol inner join extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Rector'";
+	$sql = "select e.numero as NumeroExtension from Usuario u inner join Rol r on r.idRol = u.Rol_idRol inner join Extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Rector'";
 	if($mysqli->connect_errno){
 
 		$pagiClient->consoleLog($mysqli->connect_errno);
