@@ -235,10 +235,13 @@ if($bool1) {
 				$resultado1 = $mysqli->query($sql1);
 				if($resultado1->num_rows === 0) {
 					//No se encontró el estudiante, intentar otra vez más.
+					$pagiClient->consoleLog("3er intento");
 					$idEstudiante = 0;
 					$pagiClient->streamFile("ValidationFail","#");
 					$result2 = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+					$pagiClient->consoleLog("Pedir datos");
 					$docIdEst2 = $result2->getDigits();
+					$pagiClient->consoleLog("obtener digitos");
 					$sql2 = "select * from Estudiante where numeroIdentificacion = " . $docIdEst2;
 					$idEstudiante = $docIdEst2;
 					$resultado2 = $mysqli->query($sql2);
@@ -307,6 +310,7 @@ if($bool1) {
 										$pagiClient->streamFile("Bye","#");
 									} else {
 										//Inserción correcta.
+										$pagiClient->streamFile("OkCert","#");
 										$pagiClient->streamFile("Bye","#");
 									}
 								}
