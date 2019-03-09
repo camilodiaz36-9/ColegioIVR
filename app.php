@@ -7,6 +7,7 @@ use PAGI\Client\Impl\ClientImpl as PagiClient;
 $idEstudiante = 0;
 $idTramite = 0;
 $idPago = 0;
+$isColgar=true;
 
 //Obtner instancia de cliente PAGI
 $pagiClientOptions = array();
@@ -151,9 +152,528 @@ if($bool1) {
 					}
 				} else {
 					//Opción 4-1
-					//Misma lógica 2-1
-				}
+					$result = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+					$docIdEst = $result->getDigits();
+					$sql = "select * from Estudiante where numeroIdentificacion = " . $docIdEst;
+					$idEstudiante = $docIdEst;
+					$resultado = $mysqli->query($sql);
+					if($resultado->num_rows === 0) {
+						//No se encontró el estudiante, intentar otra vez
+						$idEstudiante = 0;
+						$pagiClient->streamFile("ValidationFail","#");
+						$result1 = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+						$docIdEst1 = $result1->getDigits();
+						$sql1 = "select * from Estudiante where numeroIdentificacion = " . $docIdEst1;
+						$idEstudiante = $docIdEst1;
+						$resultado1 = $mysqli->query($sql1);
+						if($resultado1->num_rows === 0) {
+							//No se encontró el estudiante, intentar otra vez más.
+							$pagiClient->consoleLog("3er intento");
+							$idEstudiante = 0;
+							$pagiClient->streamFile("ValidationFail","#");
+							$result2 = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+							$pagiClient->consoleLog("Pedir datos");
+							$docIdEst2 = $result2->getDigits();
+							$pagiClient->consoleLog("obtener digitos");
+							$sql2 = "select * from Estudiante where numeroIdentificacion = " . $docIdEst2;
+							$idEstudiante = $docIdEst2;
+							$resultado2 = $mysqli->query($sql2);
+							if($resultado2->num_rows === 0) {
+								$idEstudiante = 0;
+								$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
+							} else {
+								//Se encontró al estudiante en el tercer intento, pedir id de pago
+								$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+								$paymentId = $result->getDigits();
+								$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+								$idPago = $paymentId;
+								$resultado = $mysqli->query($sql);
 
+								if($resultado->num_rows === 0) {
+									//2do intento id de pago
+									$idPago = 0;
+									$pagiClient->streamFile("ValidationFail","#");
+									$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+									$paymentId = $result->getDigits();
+									$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+									$idPago = $paymentId;
+									$resultado = $mysqli->query($sql);
+
+									if($resultado->num_rows === 0) {
+										//3er intento id de pago
+										$idPago = 0;
+										$pagiClient->streamFile("ValidationFail","#");
+										$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+										$paymentId = $result->getDigits();
+										$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+										$idPago = $paymentId;
+										$resultado = $mysqli->query($sql);
+
+										if($resultado->num_rows === 0) {
+											$idPago = 0;
+											$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
+										} else {
+											//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
+											
+											//Se va a buscar el id del estudiante.
+											$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+											$resultado = $mysqli->query($sql);
+											$estudiante = $resultado->fetch_assoc();
+											$idEstudiante = $estudiante['idEstudiante'];
+
+											//Se va a buscar el id del trámite.
+											$sql = "select idTramite from Tramite where sigla = 'ID'";
+											$resultado = $mysqli->query($sql);
+											$tramite = $resultado->fetch_assoc();
+											$idTramite = $tramite['idTramite'];
+
+											//Se va a buscar el id del pago.
+											$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+											$resultado = $mysqli->query($sql);
+											$pago = $resultado->fetch_assoc();
+											$idPago = $pago['idPago'];
+
+											//Se va a inhabilitar el pago porque ya se ha usado.
+											$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+											$resultado = $mysqli->query($sql);
+											if(!$resultado) {
+												//Falló la inhabilitación del pago, salir.
+												$pagiClient->streamFile("ErrorBD","#");
+												$pagiClient->streamFile("Bye","#");
+											} else {
+												//Se inserta la solicitud de certificado
+												$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+												$resultado = $mysqli->query($sql);
+
+												if(!$resultado) {
+													//Falló la inserción de la solicitud de certificado, salir.
+													$pagiClient->streamFile("ErrorBD","#");
+													$pagiClient->streamFile("Bye","#");
+												} else {
+													//Inserción correcta.
+													$pagiClient->streamFile("OkCert","#");
+													$pagiClient->streamFile("Bye","#");
+												}
+											}
+										}
+									} else {
+										//Se encontró el ID de Pago en el 2do intento, generar solicitud de certificado.
+
+										//Se va a buscar el id del estudiante.
+										$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+										$resultado = $mysqli->query($sql);
+										$estudiante = $resultado->fetch_assoc();
+										$idEstudiante = $estudiante['idEstudiante'];
+
+										//Se va a buscar el id del trámite.
+										$sql = "select idTramite from Tramite where sigla = 'ID'";
+										$resultado = $mysqli->query($sql);
+										$tramite = $resultado->fetch_assoc();
+										$idTramite = $tramite['idTramite'];
+
+										//Se va a buscar el id del pago.
+										$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+										$resultado = $mysqli->query($sql);
+										$pago = $resultado->fetch_assoc();
+										$idPago = $pago['idPago'];
+
+										//Se va a inhabilitar el pago porque ya se ha usado.
+										$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+										$resultado = $mysqli->query($sql);
+										if(!$resultado) {
+											//Falló la inhabilitación del pago, salir.
+											$pagiClient->streamFile("ErrorBD","#");
+											$pagiClient->streamFile("Bye","#");
+										} else {
+											//Se inserta la solicitud de certificado
+											$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+											$resultado = $mysqli->query($sql);
+
+											if(!$resultado) {
+												//Falló la inserción de la solicitud de certificado, salir.
+												$pagiClient->streamFile("ErrorBD","#");
+												$pagiClient->streamFile("Bye","#");
+											} else {
+												//Inserción correcta.
+												$pagiClient->streamFile("OkCert","#");
+												$pagiClient->streamFile("Bye","#");
+											}
+										}
+									}
+								} else {
+									//Se encontró el ID de Pago en el 1er intento, generar solicitud de certificado.
+
+									//Se va a buscar el id del estudiante.
+									$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+									$resultado = $mysqli->query($sql);
+									$estudiante = $resultado->fetch_assoc();
+									$idEstudiante = $estudiante['idEstudiante'];
+
+									//Se va a buscar el id del trámite.
+									$sql = "select idTramite from Tramite where sigla = 'ID'";
+									$resultado = $mysqli->query($sql);
+									$tramite = $resultado->fetch_assoc();
+									$idTramite = $tramite['idTramite'];
+
+									//Se va a buscar el id del pago.
+									$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									$pago = $resultado->fetch_assoc();
+									$idPago = $pago['idPago'];
+
+									//Se va a inhabilitar el pago porque ya se ha usado.
+									$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									if(!$resultado) {
+										//Falló la inhabilitación del pago, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Se inserta la solicitud de certificado
+										$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+										$resultado = $mysqli->query($sql);
+
+										if(!$resultado) {
+											//Falló la inserción de la solicitud de certificado, salir.
+											$pagiClient->streamFile("ErrorBD","#");
+											$pagiClient->streamFile("Bye","#");
+										} else {
+											//Inserción correcta.
+											$pagiClient->streamFile("OkCert","#");
+											$pagiClient->streamFile("Bye","#");
+										}
+									}
+								}
+							}
+						} else {
+							//Se encontró al estudiante en el segundo intento
+							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+							$paymentId = $result->getDigits();
+							$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+							$idPago = $paymentId;
+							$resultado = $mysqli->query($sql);
+
+							if($resultado->num_rows === 0) {
+								//2do intento id de pago
+								$idPago = 0;
+								$pagiClient->streamFile("ValidationFail","#");
+								$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+								$paymentId = $result->getDigits();
+								$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+								$idPago = $paymentId;
+								$resultado = $mysqli->query($sql);
+
+								if($resultado->num_rows === 0) {
+									//3er intento id de pago
+									$idPago = 0;
+									$pagiClient->streamFile("ValidationFail","#");
+									$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+									$paymentId = $result->getDigits();
+									$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+									$idPago = $paymentId;
+									$resultado = $mysqli->query($sql);
+
+									if($resultado->num_rows === 0) {
+										$idPago = 0;
+										$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
+									} else {
+										//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
+										
+										//Se va a buscar el id del estudiante.
+										$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+										$resultado = $mysqli->query($sql);
+										$estudiante = $resultado->fetch_assoc();
+										$idEstudiante = $estudiante['idEstudiante'];
+
+										//Se va a buscar el id del trámite.
+										$sql = "select idTramite from Tramite where sigla = 'ID'";
+										$resultado = $mysqli->query($sql);
+										$tramite = $resultado->fetch_assoc();
+										$idTramite = $tramite['idTramite'];
+
+										//Se va a buscar el id del pago.
+										$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+										$resultado = $mysqli->query($sql);
+										$pago = $resultado->fetch_assoc();
+										$idPago = $pago['idPago'];
+
+										//Se va a inhabilitar el pago porque ya se ha usado.
+										$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+										$resultado = $mysqli->query($sql);
+										if(!$resultado) {
+											//Falló la inhabilitación del pago, salir.
+											$pagiClient->streamFile("ErrorBD","#");
+											$pagiClient->streamFile("Bye","#");
+										} else {
+											//Se inserta la solicitud de certificado
+											$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+											$resultado = $mysqli->query($sql);
+
+											if(!$resultado) {
+												//Falló la inserción de la solicitud de certificado, salir.
+												$pagiClient->streamFile("ErrorBD","#");
+												$pagiClient->streamFile("Bye","#");
+											} else {
+												//Inserción correcta.
+												$pagiClient->streamFile("OkCert","#");
+												$pagiClient->streamFile("Bye","#");
+											}
+										}
+									}
+								} else {
+									//Se encontró el ID de Pago en el 2do intento, generar solicitud de certificado.
+
+									//Se va a buscar el id del estudiante.
+									$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+									$resultado = $mysqli->query($sql);
+									$estudiante = $resultado->fetch_assoc();
+									$idEstudiante = $estudiante['idEstudiante'];
+
+									//Se va a buscar el id del trámite.
+									$sql = "select idTramite from Tramite where sigla = 'ID'";
+									$resultado = $mysqli->query($sql);
+									$tramite = $resultado->fetch_assoc();
+									$idTramite = $tramite['idTramite'];
+
+									//Se va a buscar el id del pago.
+									$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									$pago = $resultado->fetch_assoc();
+									$idPago = $pago['idPago'];
+
+									//Se va a inhabilitar el pago porque ya se ha usado.
+									$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									if(!$resultado) {
+										//Falló la inhabilitación del pago, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Se inserta la solicitud de certificado
+										$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+										$resultado = $mysqli->query($sql);
+
+										if(!$resultado) {
+											//Falló la inserción de la solicitud de certificado, salir.
+											$pagiClient->streamFile("ErrorBD","#");
+											$pagiClient->streamFile("Bye","#");
+										} else {
+											//Inserción correcta.
+											$pagiClient->streamFile("OkCert","#");
+											$pagiClient->streamFile("Bye","#");
+										}
+									}
+								}
+							} else {
+								//Se encontró el ID de Pago en el 1er intento, generar solicitud de certificado.
+								
+								//Se va a buscar el id del estudiante.
+								$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+								$resultado = $mysqli->query($sql);
+								$estudiante = $resultado->fetch_assoc();
+								$idEstudiante = $estudiante['idEstudiante'];
+
+								//Se va a buscar el id del trámite.
+								$sql = "select idTramite from Tramite where sigla = 'ID'";
+								$resultado = $mysqli->query($sql);
+								$tramite = $resultado->fetch_assoc();
+								$idTramite = $tramite['idTramite'];
+
+								//Se va a buscar el id del pago.
+								$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								$pago = $resultado->fetch_assoc();
+								$idPago = $pago['idPago'];
+
+								//Se va a inhabilitar el pago porque ya se ha usado.
+								$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								if(!$resultado) {
+									//Falló la inhabilitación del pago, salir.
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Se inserta la solicitud de certificado
+									$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+									$resultado = $mysqli->query($sql);
+
+									if(!$resultado) {
+										//Falló la inserción de la solicitud de certificado, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Inserción correcta.
+										$pagiClient->streamFile("OkCert","#");
+										$pagiClient->streamFile("Bye","#");
+									}
+								}
+							}
+						}
+					} else {
+						//Se encontró el estudiante en el primer intento
+						$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+						$paymentId = $result->getDigits();
+						$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+						$idPago = $paymentId;
+						$resultado = $mysqli->query($sql);
+
+						if($resultado->num_rows === 0) {
+							//2do intento id de pago
+							$idPago = 0;
+							$pagiClient->streamFile("ValidationFail","#");
+							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+							$paymentId = $result->getDigits();
+							$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+							$idPago = $paymentId;
+							$resultado = $mysqli->query($sql);
+
+							if($resultado->num_rows === 0) {
+								//3er intento id de pago
+								$idPago = 0;
+								$pagiClient->streamFile("ValidationFail","#");
+								$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+								$paymentId = $result->getDigits();
+								$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+								$idPago = $paymentId;
+								$resultado = $mysqli->query($sql);
+
+								if($resultado->num_rows === 0) {
+									$idPago = 0;
+									$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
+								} else {
+									//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
+									
+									//Se va a buscar el id del estudiante.
+									$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+									$resultado = $mysqli->query($sql);
+									$estudiante = $resultado->fetch_assoc();
+									$idEstudiante = $estudiante['idEstudiante'];
+
+									//Se va a buscar el id del trámite.
+									$sql = "select idTramite from Tramite where sigla = 'ID'";
+									$resultado = $mysqli->query($sql);
+									$tramite = $resultado->fetch_assoc();
+									$idTramite = $tramite['idTramite'];
+
+									//Se va a buscar el id del pago.
+									$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									$pago = $resultado->fetch_assoc();
+									$idPago = $pago['idPago'];
+
+									//Se va a inhabilitar el pago porque ya se ha usado.
+									$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									if(!$resultado) {
+										//Falló la inhabilitación del pago, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Se inserta la solicitud de certificado
+										$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+										$resultado = $mysqli->query($sql);
+
+										if(!$resultado) {
+											//Falló la inserción de la solicitud de certificado, salir.
+											$pagiClient->streamFile("ErrorBD","#");
+											$pagiClient->streamFile("Bye","#");
+										} else {
+											//Inserción correcta.
+											$pagiClient->streamFile("OkCert","#");
+											$pagiClient->streamFile("Bye","#");
+										}
+									} 
+								}
+							} else {
+								//Se encontró el ID de Pago en el 2do intento, generar solicitud de certificado.
+
+								//Se va a buscar el id del estudiante.
+								$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+								$resultado = $mysqli->query($sql);
+								$estudiante = $resultado->fetch_assoc();
+								$idEstudiante = $estudiante['idEstudiante'];
+
+								//Se va a buscar el id del trámite.
+								$sql = "select idTramite from Tramite where sigla = 'ID'";
+								$resultado = $mysqli->query($sql);
+								$tramite = $resultado->fetch_assoc();
+								$idTramite = $tramite['idTramite'];
+
+								//Se va a buscar el id del pago.
+								$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								$pago = $resultado->fetch_assoc();
+								$idPago = $pago['idPago'];
+
+								//Se va a inhabilitar el pago porque ya se ha usado.
+								$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								if(!$resultado) {
+									//Falló la inhabilitación del pago, salir.
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Se inserta la solicitud de certificado
+									$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+									$resultado = $mysqli->query($sql);
+
+									if(!$resultado) {
+										//Falló la inserción de la solicitud de certificado, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Inserción correcta.
+										$pagiClient->streamFile("OkCert","#");
+										$pagiClient->streamFile("Bye","#");
+									}
+								}
+							}
+						} else {
+							//Se encontró el ID de Pago en el 1er intento, generar solicitud de certificado.
+							
+							//Se va a buscar el id del estudiante.
+							$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+							$resultado = $mysqli->query($sql);
+							$estudiante = $resultado->fetch_assoc();
+							$idEstudiante = $estudiante['idEstudiante'];
+
+							//Se va a buscar el id del trámite.
+							$sql = "select idTramite from Tramite where sigla = 'ID'";
+							$resultado = $mysqli->query($sql);
+							$tramite = $resultado->fetch_assoc();
+							$idTramite = $tramite['idTramite'];
+
+							//Se va a buscar el id del pago.
+							$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+							$resultado = $mysqli->query($sql);
+							$pago = $resultado->fetch_assoc();
+							$idPago = $pago['idPago'];
+
+							//Se va a inhabilitar el pago porque ya se ha usado.
+							$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+							$resultado = $mysqli->query($sql);
+							if(!$resultado) {
+								//Falló la inhabilitación del pago, salir.
+								$pagiClient->streamFile("ErrorBD","#");
+								$pagiClient->streamFile("Bye","#");
+							} else {
+								//Se inserta la solicitud de certificado
+								$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+								$resultado = $mysqli->query($sql);
+
+								if(!$resultado) {
+									//Falló la inserción de la solicitud de certificado, salir.
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Inserción correcta.
+									$pagiClient->streamFile("OkCert","#");
+									$pagiClient->streamFile("Bye","#");
+								}
+							}
+						}
+					}
+				}
 			}
 		} else {
 
@@ -183,8 +703,528 @@ if($bool1) {
 			} else {
 				//Opción 3-1
 				//La misma ĺógica que en la 2-1
-			}
+				$result = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+				$docIdEst = $result->getDigits();
+				$sql = "select * from Estudiante where numeroIdentificacion = " . $docIdEst;
+				$idEstudiante = $docIdEst;
+				$resultado = $mysqli->query($sql);
+				if($resultado->num_rows === 0) {
+					//No se encontró el estudiante, intentar otra vez
+					$idEstudiante = 0;
+					$pagiClient->streamFile("ValidationFail","#");
+					$result1 = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+					$docIdEst1 = $result1->getDigits();
+					$sql1 = "select * from Estudiante where numeroIdentificacion = " . $docIdEst1;
+					$idEstudiante = $docIdEst1;
+					$resultado1 = $mysqli->query($sql1);
+					if($resultado1->num_rows === 0) {
+						//No se encontró el estudiante, intentar otra vez más.
+						$pagiClient->consoleLog("3er intento");
+						$idEstudiante = 0;
+						$pagiClient->streamFile("ValidationFail","#");
+						$result2 = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+						$pagiClient->consoleLog("Pedir datos");
+						$docIdEst2 = $result2->getDigits();
+						$pagiClient->consoleLog("obtener digitos");
+						$sql2 = "select * from Estudiante where numeroIdentificacion = " . $docIdEst2;
+						$idEstudiante = $docIdEst2;
+						$resultado2 = $mysqli->query($sql2);
+						if($resultado2->num_rows === 0) {
+							$idEstudiante = 0;
+							$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
+						} else {
+							//Se encontró al estudiante en el tercer intento, pedir id de pago
+							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+							$paymentId = $result->getDigits();
+							$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+							$idPago = $paymentId;
+							$resultado = $mysqli->query($sql);
 
+							if($resultado->num_rows === 0) {
+								//2do intento id de pago
+								$idPago = 0;
+								$pagiClient->streamFile("ValidationFail","#");
+								$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+								$paymentId = $result->getDigits();
+								$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+								$idPago = $paymentId;
+								$resultado = $mysqli->query($sql);
+
+								if($resultado->num_rows === 0) {
+									//3er intento id de pago
+									$idPago = 0;
+									$pagiClient->streamFile("ValidationFail","#");
+									$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+									$paymentId = $result->getDigits();
+									$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+									$idPago = $paymentId;
+									$resultado = $mysqli->query($sql);
+
+									if($resultado->num_rows === 0) {
+										$idPago = 0;
+										$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
+									} else {
+										//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
+										
+										//Se va a buscar el id del estudiante.
+										$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+										$resultado = $mysqli->query($sql);
+										$estudiante = $resultado->fetch_assoc();
+										$idEstudiante = $estudiante['idEstudiante'];
+
+										//Se va a buscar el id del trámite.
+										$sql = "select idTramite from Tramite where sigla = 'IA'";
+										$resultado = $mysqli->query($sql);
+										$tramite = $resultado->fetch_assoc();
+										$idTramite = $tramite['idTramite'];
+
+										//Se va a buscar el id del pago.
+										$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+										$resultado = $mysqli->query($sql);
+										$pago = $resultado->fetch_assoc();
+										$idPago = $pago['idPago'];
+
+										//Se va a inhabilitar el pago porque ya se ha usado.
+										$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+										$resultado = $mysqli->query($sql);
+										if(!$resultado) {
+											//Falló la inhabilitación del pago, salir.
+											$pagiClient->streamFile("ErrorBD","#");
+											$pagiClient->streamFile("Bye","#");
+										} else {
+											//Se inserta la solicitud de certificado
+											$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+											$resultado = $mysqli->query($sql);
+
+											if(!$resultado) {
+												//Falló la inserción de la solicitud de certificado, salir.
+												$pagiClient->streamFile("ErrorBD","#");
+												$pagiClient->streamFile("Bye","#");
+											} else {
+												//Inserción correcta.
+												$pagiClient->streamFile("OkCert","#");
+												$pagiClient->streamFile("Bye","#");
+											}
+										}
+									}
+								} else {
+									//Se encontró el ID de Pago en el 2do intento, generar solicitud de certificado.
+
+									//Se va a buscar el id del estudiante.
+									$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+									$resultado = $mysqli->query($sql);
+									$estudiante = $resultado->fetch_assoc();
+									$idEstudiante = $estudiante['idEstudiante'];
+
+									//Se va a buscar el id del trámite.
+									$sql = "select idTramite from Tramite where sigla = 'IA'";
+									$resultado = $mysqli->query($sql);
+									$tramite = $resultado->fetch_assoc();
+									$idTramite = $tramite['idTramite'];
+
+									//Se va a buscar el id del pago.
+									$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									$pago = $resultado->fetch_assoc();
+									$idPago = $pago['idPago'];
+
+									//Se va a inhabilitar el pago porque ya se ha usado.
+									$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									if(!$resultado) {
+										//Falló la inhabilitación del pago, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Se inserta la solicitud de certificado
+										$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+										$resultado = $mysqli->query($sql);
+
+										if(!$resultado) {
+											//Falló la inserción de la solicitud de certificado, salir.
+											$pagiClient->streamFile("ErrorBD","#");
+											$pagiClient->streamFile("Bye","#");
+										} else {
+											//Inserción correcta.
+											$pagiClient->streamFile("OkCert","#");
+											$pagiClient->streamFile("Bye","#");
+										}
+									}
+								}
+							} else {
+								//Se encontró el ID de Pago en el 1er intento, generar solicitud de certificado.
+
+								//Se va a buscar el id del estudiante.
+								$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+								$resultado = $mysqli->query($sql);
+								$estudiante = $resultado->fetch_assoc();
+								$idEstudiante = $estudiante['idEstudiante'];
+
+								//Se va a buscar el id del trámite.
+								$sql = "select idTramite from Tramite where sigla = 'IA'";
+								$resultado = $mysqli->query($sql);
+								$tramite = $resultado->fetch_assoc();
+								$idTramite = $tramite['idTramite'];
+
+								//Se va a buscar el id del pago.
+								$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								$pago = $resultado->fetch_assoc();
+								$idPago = $pago['idPago'];
+
+								//Se va a inhabilitar el pago porque ya se ha usado.
+								$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								if(!$resultado) {
+									//Falló la inhabilitación del pago, salir.
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Se inserta la solicitud de certificado
+									$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+									$resultado = $mysqli->query($sql);
+
+									if(!$resultado) {
+										//Falló la inserción de la solicitud de certificado, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Inserción correcta.
+										$pagiClient->streamFile("OkCert","#");
+										$pagiClient->streamFile("Bye","#");
+									}
+								}
+							}
+						}
+					} else {
+						//Se encontró al estudiante en el segundo intento
+						$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+						$paymentId = $result->getDigits();
+						$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+						$idPago = $paymentId;
+						$resultado = $mysqli->query($sql);
+
+						if($resultado->num_rows === 0) {
+							//2do intento id de pago
+							$idPago = 0;
+							$pagiClient->streamFile("ValidationFail","#");
+							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+							$paymentId = $result->getDigits();
+							$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+							$idPago = $paymentId;
+							$resultado = $mysqli->query($sql);
+
+							if($resultado->num_rows === 0) {
+								//3er intento id de pago
+								$idPago = 0;
+								$pagiClient->streamFile("ValidationFail","#");
+								$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+								$paymentId = $result->getDigits();
+								$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+								$idPago = $paymentId;
+								$resultado = $mysqli->query($sql);
+
+								if($resultado->num_rows === 0) {
+									$idPago = 0;
+									$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
+								} else {
+									//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
+									
+									//Se va a buscar el id del estudiante.
+									$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+									$resultado = $mysqli->query($sql);
+									$estudiante = $resultado->fetch_assoc();
+									$idEstudiante = $estudiante['idEstudiante'];
+
+									//Se va a buscar el id del trámite.
+									$sql = "select idTramite from Tramite where sigla = 'IA'";
+									$resultado = $mysqli->query($sql);
+									$tramite = $resultado->fetch_assoc();
+									$idTramite = $tramite['idTramite'];
+
+									//Se va a buscar el id del pago.
+									$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									$pago = $resultado->fetch_assoc();
+									$idPago = $pago['idPago'];
+
+									//Se va a inhabilitar el pago porque ya se ha usado.
+									$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+									$resultado = $mysqli->query($sql);
+									if(!$resultado) {
+										//Falló la inhabilitación del pago, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Se inserta la solicitud de certificado
+										$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+										$resultado = $mysqli->query($sql);
+
+										if(!$resultado) {
+											//Falló la inserción de la solicitud de certificado, salir.
+											$pagiClient->streamFile("ErrorBD","#");
+											$pagiClient->streamFile("Bye","#");
+										} else {
+											//Inserción correcta.
+											$pagiClient->streamFile("OkCert","#");
+											$pagiClient->streamFile("Bye","#");
+										}
+									}
+								}
+							} else {
+								//Se encontró el ID de Pago en el 2do intento, generar solicitud de certificado.
+
+								//Se va a buscar el id del estudiante.
+								$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+								$resultado = $mysqli->query($sql);
+								$estudiante = $resultado->fetch_assoc();
+								$idEstudiante = $estudiante['idEstudiante'];
+
+								//Se va a buscar el id del trámite.
+								$sql = "select idTramite from Tramite where sigla = 'IA'";
+								$resultado = $mysqli->query($sql);
+								$tramite = $resultado->fetch_assoc();
+								$idTramite = $tramite['idTramite'];
+
+								//Se va a buscar el id del pago.
+								$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								$pago = $resultado->fetch_assoc();
+								$idPago = $pago['idPago'];
+
+								//Se va a inhabilitar el pago porque ya se ha usado.
+								$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								if(!$resultado) {
+									//Falló la inhabilitación del pago, salir.
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Se inserta la solicitud de certificado
+									$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+									$resultado = $mysqli->query($sql);
+
+									if(!$resultado) {
+										//Falló la inserción de la solicitud de certificado, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Inserción correcta.
+										$pagiClient->streamFile("OkCert","#");
+										$pagiClient->streamFile("Bye","#");
+									}
+								}
+							}
+						} else {
+							//Se encontró el ID de Pago en el 1er intento, generar solicitud de certificado.
+							
+							//Se va a buscar el id del estudiante.
+							$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+							$resultado = $mysqli->query($sql);
+							$estudiante = $resultado->fetch_assoc();
+							$idEstudiante = $estudiante['idEstudiante'];
+
+							//Se va a buscar el id del trámite.
+							$sql = "select idTramite from Tramite where sigla = 'IA'";
+							$resultado = $mysqli->query($sql);
+							$tramite = $resultado->fetch_assoc();
+							$idTramite = $tramite['idTramite'];
+
+							//Se va a buscar el id del pago.
+							$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+							$resultado = $mysqli->query($sql);
+							$pago = $resultado->fetch_assoc();
+							$idPago = $pago['idPago'];
+
+							//Se va a inhabilitar el pago porque ya se ha usado.
+							$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+							$resultado = $mysqli->query($sql);
+							if(!$resultado) {
+								//Falló la inhabilitación del pago, salir.
+								$pagiClient->streamFile("ErrorBD","#");
+								$pagiClient->streamFile("Bye","#");
+							} else {
+								//Se inserta la solicitud de certificado
+								$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+								$resultado = $mysqli->query($sql);
+
+								if(!$resultado) {
+									//Falló la inserción de la solicitud de certificado, salir.
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Inserción correcta.
+									$pagiClient->streamFile("OkCert","#");
+									$pagiClient->streamFile("Bye","#");
+								}
+							}
+						}
+					}
+				} else {
+					//Se encontró el estudiante en el primer intento
+					$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+					$paymentId = $result->getDigits();
+					$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+					$idPago = $paymentId;
+					$resultado = $mysqli->query($sql);
+
+					if($resultado->num_rows === 0) {
+						//2do intento id de pago
+						$idPago = 0;
+						$pagiClient->streamFile("ValidationFail","#");
+						$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+						$paymentId = $result->getDigits();
+						$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+						$idPago = $paymentId;
+						$resultado = $mysqli->query($sql);
+
+						if($resultado->num_rows === 0) {
+							//3er intento id de pago
+							$idPago = 0;
+							$pagiClient->streamFile("ValidationFail","#");
+							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
+							$paymentId = $result->getDigits();
+							$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
+							$idPago = $paymentId;
+							$resultado = $mysqli->query($sql);
+
+							if($resultado->num_rows === 0) {
+								$idPago = 0;
+								$pagiClient->streamFile("Bye","#"); //Falló validación, salir.
+							} else {
+								//Se encontró el ID de Pago en el 3er intento, generar solicitud de certificado.
+								
+								//Se va a buscar el id del estudiante.
+								$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+								$resultado = $mysqli->query($sql);
+								$estudiante = $resultado->fetch_assoc();
+								$idEstudiante = $estudiante['idEstudiante'];
+
+								//Se va a buscar el id del trámite.
+								$sql = "select idTramite from Tramite where sigla = 'IA'";
+								$resultado = $mysqli->query($sql);
+								$tramite = $resultado->fetch_assoc();
+								$idTramite = $tramite['idTramite'];
+
+								//Se va a buscar el id del pago.
+								$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								$pago = $resultado->fetch_assoc();
+								$idPago = $pago['idPago'];
+
+								//Se va a inhabilitar el pago porque ya se ha usado.
+								$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+								$resultado = $mysqli->query($sql);
+								if(!$resultado) {
+									//Falló la inhabilitación del pago, salir.
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Se inserta la solicitud de certificado
+									$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+									$resultado = $mysqli->query($sql);
+
+									if(!$resultado) {
+										//Falló la inserción de la solicitud de certificado, salir.
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Inserción correcta.
+										$pagiClient->streamFile("OkCert","#");
+										$pagiClient->streamFile("Bye","#");
+									}
+								} 
+							}
+						} else {
+							//Se encontró el ID de Pago en el 2do intento, generar solicitud de certificado.
+
+							//Se va a buscar el id del estudiante.
+							$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+							$resultado = $mysqli->query($sql);
+							$estudiante = $resultado->fetch_assoc();
+							$idEstudiante = $estudiante['idEstudiante'];
+
+							//Se va a buscar el id del trámite.
+							$sql = "select idTramite from Tramite where sigla = 'IA'";
+							$resultado = $mysqli->query($sql);
+							$tramite = $resultado->fetch_assoc();
+							$idTramite = $tramite['idTramite'];
+
+							//Se va a buscar el id del pago.
+							$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+							$resultado = $mysqli->query($sql);
+							$pago = $resultado->fetch_assoc();
+							$idPago = $pago['idPago'];
+
+							//Se va a inhabilitar el pago porque ya se ha usado.
+							$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+							$resultado = $mysqli->query($sql);
+							if(!$resultado) {
+								//Falló la inhabilitación del pago, salir.
+								$pagiClient->streamFile("ErrorBD","#");
+								$pagiClient->streamFile("Bye","#");
+							} else {
+								//Se inserta la solicitud de certificado
+								$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+								$resultado = $mysqli->query($sql);
+
+								if(!$resultado) {
+									//Falló la inserción de la solicitud de certificado, salir.
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Inserción correcta.
+									$pagiClient->streamFile("OkCert","#");
+									$pagiClient->streamFile("Bye","#");
+								}
+							}
+						}
+					} else {
+						//Se encontró el ID de Pago en el 1er intento, generar solicitud de certificado.
+						
+						//Se va a buscar el id del estudiante.
+						$sql = "select idEstudiante from Estudiante where numeroIdentificacion = " . $idEstudiante;
+						$resultado = $mysqli->query($sql);
+						$estudiante = $resultado->fetch_assoc();
+						$idEstudiante = $estudiante['idEstudiante'];
+
+						//Se va a buscar el id del trámite.
+						$sql = "select idTramite from Tramite where sigla = 'IA'";
+						$resultado = $mysqli->query($sql);
+						$tramite = $resultado->fetch_assoc();
+						$idTramite = $tramite['idTramite'];
+
+						//Se va a buscar el id del pago.
+						$sql = "select idPago from Pago where numeroReferencia = " . $idPago;
+						$resultado = $mysqli->query($sql);
+						$pago = $resultado->fetch_assoc();
+						$idPago = $pago['idPago'];
+
+						//Se va a inhabilitar el pago porque ya se ha usado.
+						$sql = "update Pago set usado = 1 where idPago = " . $idPago;
+						$resultado = $mysqli->query($sql);
+						if(!$resultado) {
+							//Falló la inhabilitación del pago, salir.
+							$pagiClient->streamFile("ErrorBD","#");
+							$pagiClient->streamFile("Bye","#");
+						} else {
+							//Se inserta la solicitud de certificado
+							$sql = "insert into Solicitud(fecha_recibido, fecha_entrega, Estudiante_idEstudiante, Tramite_idTramite, Pago_idPago) values(CURRENT_TIMESTAMP, NOW() + INTERVAL 1 DAY, " . $idEstudiante . ", " . $idTramite . ", " . $idPago . ")";
+							$resultado = $mysqli->query($sql);
+
+							if(!$resultado) {
+								//Falló la inserción de la solicitud de certificado, salir.
+								$pagiClient->streamFile("ErrorBD","#");
+								$pagiClient->streamFile("Bye","#");
+							} else {
+								//Inserción correcta.
+								$pagiClient->streamFile("OkCert","#");
+								$pagiClient->streamFile("Bye","#");
+							}
+						}
+					}
+				}
+			}
 		}
 	} else {
 
@@ -204,11 +1244,14 @@ if($bool1) {
 					//Opción 2-3
 					//Decirle al usuario que se va a redirigir su llamada a la secretaría
 					//Poner la extensión que tenga asignada la secretaria y salir.
+					
 				}
 
 			} else {
 				//Opción 2-2
 				//Mostrar audio explicando los diferentes precios de cada trámite.
+				$pagiClient->streamFile("222","#");
+				$pagiClient->streamFile("Bye","#");
 				//Salir
 			}
 		} else {
@@ -252,7 +1295,7 @@ if($bool1) {
 						//Se encontró al estudiante en el tercer intento, pedir id de pago
 						$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 						$paymentId = $result->getDigits();
-						$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+						$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 						$idPago = $paymentId;
 						$resultado = $mysqli->query($sql);
 
@@ -262,7 +1305,7 @@ if($bool1) {
 							$pagiClient->streamFile("ValidationFail","#");
 							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 							$paymentId = $result->getDigits();
-							$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+							$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 							$idPago = $paymentId;
 							$resultado = $mysqli->query($sql);
 
@@ -272,7 +1315,7 @@ if($bool1) {
 								$pagiClient->streamFile("ValidationFail","#");
 								$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 								$paymentId = $result->getDigits();
-								$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+								$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 								$idPago = $paymentId;
 								$resultado = $mysqli->query($sql);
 
@@ -416,7 +1459,7 @@ if($bool1) {
 					//Se encontró al estudiante en el segundo intento
 					$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 					$paymentId = $result->getDigits();
-					$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+					$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 					$idPago = $paymentId;
 					$resultado = $mysqli->query($sql);
 
@@ -426,7 +1469,7 @@ if($bool1) {
 						$pagiClient->streamFile("ValidationFail","#");
 						$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 						$paymentId = $result->getDigits();
-						$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+						$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 						$idPago = $paymentId;
 						$resultado = $mysqli->query($sql);
 
@@ -436,7 +1479,7 @@ if($bool1) {
 							$pagiClient->streamFile("ValidationFail","#");
 							$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 							$paymentId = $result->getDigits();
-							$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+							$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 							$idPago = $paymentId;
 							$resultado = $mysqli->query($sql);
 
@@ -580,7 +1623,7 @@ if($bool1) {
 				//Se encontró el estudiante en el primer intento
 				$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 				$paymentId = $result->getDigits();
-				$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+				$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 				$idPago = $paymentId;
 				$resultado = $mysqli->query($sql);
 
@@ -590,7 +1633,7 @@ if($bool1) {
 					$pagiClient->streamFile("ValidationFail","#");
 					$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 					$paymentId = $result->getDigits();
-					$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+					$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 					$idPago = $paymentId;
 					$resultado = $mysqli->query($sql);
 
@@ -600,7 +1643,7 @@ if($bool1) {
 						$pagiClient->streamFile("ValidationFail","#");
 						$result = $pagiClient->getData("PaymentId", 2500, 6); //Crear archivo de constantes
 						$paymentId = $result->getDigits();
-						$sql = "select * from Pago where numeroReferencia = " . $paymentId;
+						$sql = "select * from Pago where numeroReferencia = " . $paymentId . " and usado = 0";
 						$idPago = $paymentId;
 						$resultado = $mysqli->query($sql);
 
@@ -743,6 +1786,7 @@ if($bool1) {
 		}
 	}
 } else {
+	//FIXME: Haría falta redirigir la llamada a la extensión y ya queda lista esta opción.
 	//Decirle al usuario que se va a redirigir su llamada al rector
 	$pagiClient->streamFile("11", "#");
 	$sql = "select e.numero as NumeroExtension from Usuario u inner join Rol r on r.idRol = u.Rol_idRol inner join Extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Rector'";
@@ -759,7 +1803,10 @@ if($bool1) {
 			$pagiClient->streamFile("Bye","#");
 		} else {
 			$extension = $resultado->fetch_assoc();
-			$pagiClient->sayPhonetic($extension['NumeroExtension']);	
+			//TODO: Ya podemos obtener el número de la extensión, habría que mirar la forma de mandar la llamada a la extensión del rector.
+			$pagiClient->consoleLog("Número de la extensión del rector: " . $extension['NumeroExtension']);
+			$isColgar=false;
+			$pagiClient->setExtension($extension['NumeroExtension']);
 		}
 		
 		$resultado->free();
@@ -768,6 +1815,9 @@ if($bool1) {
 	$mysqli->close();
 }
 
-$pagiClient->hangup();
+if($isColgar){
+	$pagiClient->streamFile("Bye","#");
+	$pagiClient->hangup();
+}
 
 ?>
