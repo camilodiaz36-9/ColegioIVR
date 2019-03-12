@@ -94,12 +94,37 @@ if($bool1) {
 							} else {
 								//Opción 6-2
 								//Misma lógica, opción 2-3
+								$pagiClient->streamFile("62", "#");
+								$sql = "select e.numero as NumeroExtension from Usuario u inner join Rol r on r.idRol = u.Rol_idRol inner join Extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Tesorero'";
+								if($mysqli->connect_errno){
+
+									$pagiClient->consoleLog($mysqli->connect_errno);
+									$pagiClient->consoleLog($mysqli->connect_error);
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									$resultado = $mysqli->query($sql);
+									if(!$resultado){
+										$pagiClient->streamFile("ErrorBD","#");
+										$pagiClient->streamFile("Bye","#");
+									} else {
+										//Se obtiene el número de la extensión del tesorero, se redirige a la extensión y sale de la aplicación.
+										$extension = $resultado->fetch_assoc();
+										$pagiClient->consoleLog("Número de la extensión del Tesorero: " . $extension['NumeroExtension']);
+										$isColgar=false;
+										$pagiClient->setExtension($extension['NumeroExtension']);
+									}
+									
+									$resultado->free();
+									$mysqli->close();
+								}
+								$mysqli->close();
 							}
 						} else {
 							//Opción 6-1
-							//Pedir documento, consultar deudas.
-							//Si tiene mostrarle el detalle de cada una: Concepto, costo, fecha de pago
-							//Si no, decirle que no tiene deudas y salir
+							//Pedir documento, consultar pagos.
+							//Si tiene mostrarle que tiene pagos disponibles
+							//Si no, decirle que no tiene pagos disponibles y salir
 						}
 
 					} 
@@ -118,11 +143,36 @@ if($bool1) {
 						} else {
 							//Opción 5-2
 							//Misma ĺógica, opción 2-3
+							$pagiClient->streamFile("52", "#");
+							$sql = "select e.numero as NumeroExtension from Usuario u inner join Rol r on r.idRol = u.Rol_idRol inner join Extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Asistente de Biblioteca'";
+							if($mysqli->connect_errno){
+
+								$pagiClient->consoleLog($mysqli->connect_errno);
+								$pagiClient->consoleLog($mysqli->connect_error);
+								$pagiClient->streamFile("ErrorBD","#");
+								$pagiClient->streamFile("Bye","#");
+							} else {
+								$resultado = $mysqli->query($sql);
+								if(!$resultado){
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Se obtiene el número de la extensión del asistente de biblioteca, se redirige a la extensión y sale de la aplicación.
+									$extension = $resultado->fetch_assoc();
+									$pagiClient->consoleLog("Número de la extensión del Asistente de Biblioteca: " . $extension['NumeroExtension']);
+									$isColgar=false;
+									$pagiClient->setExtension($extension['NumeroExtension']);
+								}
+								
+								$resultado->free();
+								$mysqli->close();
+							}
+							$mysqli->close();
 						}
 					} else {
 						//Opción 5-1
 						//Pedir documento, consultar prestamos.
-						//Si tiene un pendiente decirle la fecha de entrega.
+						//Si tiene un pendiente decirle que lo entregue.
 						//Si no, decirle que no tiene pendiente ninguno y salir.
 					}
 
@@ -144,6 +194,31 @@ if($bool1) {
 						} else {
 							//Opción 4-3
 							//Misma lógica 2-3
+							$pagiClient->streamFile("33", "#");
+							$sql = "select e.numero as NumeroExtension from Usuario u inner join Rol r on r.idRol = u.Rol_idRol inner join Extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Coordinador de Disciplina'";
+							if($mysqli->connect_errno){
+
+								$pagiClient->consoleLog($mysqli->connect_errno);
+								$pagiClient->consoleLog($mysqli->connect_error);
+								$pagiClient->streamFile("ErrorBD","#");
+								$pagiClient->streamFile("Bye","#");
+							} else {
+								$resultado = $mysqli->query($sql);
+								if(!$resultado){
+									$pagiClient->streamFile("ErrorBD","#");
+									$pagiClient->streamFile("Bye","#");
+								} else {
+									//Se obtiene el número de la extensión del coordinador de disciplina, se redirige a la extensión y sale de la aplicación.
+									$extension = $resultado->fetch_assoc();
+									$pagiClient->consoleLog("Número de la extensión del Coordinador de Disciplina: " . $extension['NumeroExtension']);
+									$isColgar=false;
+									$pagiClient->setExtension($extension['NumeroExtension']);
+								}
+								
+								$resultado->free();
+								$mysqli->close();
+							}
+							$mysqli->close();
 						}
 
 					} else {
@@ -692,12 +767,37 @@ if($bool1) {
 					} else {
 						//Opción 3-3
 						//La misma ĺógica que en la 2-3
+						//$pagiClient->streamFile("333", "#");
+						$sql = "select e.numero as NumeroExtension from Usuario u inner join Rol r on r.idRol = u.Rol_idRol inner join Extension e on e.idExtension = u.Extension_idExtension where r.nombre like '%Acad%'";
+						if($mysqli->connect_errno){
+
+							$pagiClient->consoleLog($mysqli->connect_errno);
+							$pagiClient->consoleLog($mysqli->connect_error);
+							$pagiClient->streamFile("ErrorBD","#");
+							$pagiClient->streamFile("Bye","#");
+						} else {
+							$resultado = $mysqli->query($sql);
+							if(!$resultado){
+								$pagiClient->streamFile("ErrorBD","#");
+								$pagiClient->streamFile("Bye","#");
+							} else {
+								//Se obtiene el número de la extensión del rector, se redirige a la extensión y sale de la aplicación.
+								$extension = $resultado->fetch_assoc();
+								$pagiClient->consoleLog("Número de la extensión del Coordinador Académico: " . $extension['NumeroExtension']);
+								$isColgar=false;
+								$pagiClient->setExtension($extension['NumeroExtension']);
+							}
+							
+							$resultado->free();
+							$mysqli->close();
+						}
+						$mysqli->close();
 					}
 
 				} else {
 					//Opción 3-2
 					//Se pide el documento y se consultan las citas que tenga.
-					//Si tiene, se le muestra en qué fecha, y con cual profesor (En módulo web pedir el audio con el nombre del profesor para reproducirlo aquí), que se acerque al colegio, y salir.
+					//Si tiene, se le muestra que tiene cita, que se acerque al colegio, y salir.
 					//Si no, decirle que no tiene citas pendientes y salir
 				}
 			} else {
@@ -1245,12 +1345,37 @@ if($bool1) {
 					//Decirle al usuario que se va a redirigir su llamada a la secretaría
 					//Poner la extensión que tenga asignada la secretaria y salir.
 					
+					$pagiClient->streamFile("23", "#");
+					$sql = "select e.numero as NumeroExtension from Usuario u inner join Rol r on r.idRol = u.Rol_idRol inner join Extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Secretaria'";
+					if($mysqli->connect_errno){
+
+						$pagiClient->consoleLog($mysqli->connect_errno);
+						$pagiClient->consoleLog($mysqli->connect_error);
+						$pagiClient->streamFile("ErrorBD","#");
+						$pagiClient->streamFile("Bye","#");
+					} else {
+						$resultado = $mysqli->query($sql);
+						if(!$resultado){
+							$pagiClient->streamFile("ErrorBD","#");
+							$pagiClient->streamFile("Bye","#");
+						} else {
+							//Se obtiene el número de la extensión del rector, se redirige a la extensión y sale de la aplicación.
+							$extension = $resultado->fetch_assoc();
+							$pagiClient->consoleLog("Número de la extensión de la secretaria: " . $extension['NumeroExtension']);
+							$isColgar=false;
+							$pagiClient->setExtension($extension['NumeroExtension']);
+						}
+						
+						$resultado->free();
+						$mysqli->close();
+					}
+					$mysqli->close();
 				}
 
 			} else {
 				//Opción 2-2
 				//Mostrar audio explicando los diferentes precios de cada trámite.
-				$pagiClient->streamFile("222","#");
+				$pagiClient->streamFile("DatosPago","#");
 				$pagiClient->streamFile("Bye","#");
 				//Salir
 			}
@@ -1786,7 +1911,6 @@ if($bool1) {
 		}
 	}
 } else {
-	//FIXME: Haría falta redirigir la llamada a la extensión y ya queda lista esta opción.
 	//Decirle al usuario que se va a redirigir su llamada al rector
 	$pagiClient->streamFile("11", "#");
 	$sql = "select e.numero as NumeroExtension from Usuario u inner join Rol r on r.idRol = u.Rol_idRol inner join Extension e on e.idExtension = u.Extension_idExtension where r.nombre = 'Rector'";
@@ -1802,8 +1926,8 @@ if($bool1) {
 			$pagiClient->streamFile("ErrorBD","#");
 			$pagiClient->streamFile("Bye","#");
 		} else {
+			//Se obtiene el número de la extensión del rector, se redirige a la extensión y sale de la aplicación.
 			$extension = $resultado->fetch_assoc();
-			//TODO: Ya podemos obtener el número de la extensión, habría que mirar la forma de mandar la llamada a la extensión del rector.
 			$pagiClient->consoleLog("Número de la extensión del rector: " . $extension['NumeroExtension']);
 			$isColgar=false;
 			$pagiClient->setExtension($extension['NumeroExtension']);
@@ -1816,7 +1940,6 @@ if($bool1) {
 }
 
 if($isColgar){
-	$pagiClient->streamFile("Bye","#");
 	$pagiClient->hangup();
 }
 
