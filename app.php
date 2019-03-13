@@ -125,6 +125,33 @@ if($bool1) {
 							//Pedir documento, consultar pagos.
 							//Si tiene mostrarle que tiene pagos disponibles
 							//Si no, decirle que no tiene pagos disponibles y salir
+							$result = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+							$docIdEst = $result->getDigits();
+							$sql = "select COUNT(*) as CantidadPagos
+									from Pago p
+									inner join Estudiante e
+									on p.Estudiante_idEstudiante = e.idEstudiante
+									where p.Estudiante_idEstudiante = (select e1.idEstudiante 
+									from Estudiante e1 
+									where e1.numeroIdentificacion = " . $docIdEst . ")
+									and usado <> 1";
+
+							$resultado = $mysqli->query($sql);
+
+							if($resultado->num_rows === 0) {
+								//No encontró nada, mostrar audio de que no tiene pagos para usar.
+								$pagiClient->streamFile("NoTienePagos","#");
+							} else {
+								$arrCantidad = $resultado->fetch_assoc();
+								$cantidadPagos = $arrCantidad['CantidadPagos'];
+								if($cantidadPagos >= 1){
+									//Al menos hay un pago
+									$pagiClient->streamFile("SiTienePagos","#");
+								} else {
+									//No tiene pagos
+									$pagiClient->streamFile("NoTienePagos","#");
+								}
+							}
 						}
 
 					} 
@@ -174,6 +201,32 @@ if($bool1) {
 						//Pedir documento, consultar prestamos.
 						//Si tiene un pendiente decirle que lo entregue.
 						//Si no, decirle que no tiene pendiente ninguno y salir.
+						$result = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+						$docIdEst = $result->getDigits();
+						$sql = "select COUNT(*) as CantidadPrestamos
+								from Prestamo p
+								inner join Estudiante e
+								on p.Estudiante_idEstudiante = e.idEstudiante
+								where p.Estudiante_idEstudiante = (select e1.idEstudiante 
+								from Estudiante e1 
+								where e1.numeroIdentificacion = " . $docIdEst . ")";
+
+						$resultado = $mysqli->query($sql);
+
+						if($resultado->num_rows === 0) {
+							//No encontró nada, mostrar audio de que no tiene prestamos por entregar.
+							$pagiClient->streamFile("NoTienePrestamo","#");
+						} else {
+							$arrCantidad = $resultado->fetch_assoc();
+							$cantidadPrestamos = $arrCantidad['CantidadPrestamos'];
+							if($cantidadPrestamos >= 1){
+								//Al menos hay una préstamo, decirle que vaya
+								$pagiClient->streamFile("SiTienePrestamo","#");
+							} else {
+								//No tiene préstamos
+								$pagiClient->streamFile("NoTienePrestamo","#");
+							}
+						}
 					}
 
 				}
@@ -224,6 +277,33 @@ if($bool1) {
 					} else {
 						//Opción 4-2
 						//Misma lógica 3-2
+						$result = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+						$docIdEst = $result->getDigits();
+						$sql = "select COUNT(*) as CantidadCitaciones 
+								from Citacion c
+								inner join Estudiante e
+								on e.idEstudiante = c.Estudiante_idEstudiante
+								where c.Estudiante_idEstudiante = (select e1.idEstudiante 
+								from Estudiante e1 
+								where e1.numeroIdentificacion = ". $docIdEst .")
+								and c.numeroCitacion like '%DISC%'";
+
+						$resultado = $mysqli->query($sql);
+
+						if($resultado->num_rows === 0) {
+							//No encontró nada, mostrar audio de que no tiene citaciones.
+							$pagiClient->streamFile("NoTieneCita","#");
+						} else {
+							$arrCantidad = $resultado->fetch_assoc();
+							$cantidadCitaciones = $arrCantidad['CantidadCitaciones'];
+							if($cantidadCitaciones >= 1){
+								//Al menos hay una cita, decirle que vaya
+								$pagiClient->streamFile("SiTieneCita","#");
+							} else {
+								//No tiene citaciones
+								$pagiClient->streamFile("NoTieneCita","#");
+							}
+						}
 					}
 				} else {
 					//Opción 4-1
@@ -799,6 +879,34 @@ if($bool1) {
 					//Se pide el documento y se consultan las citas que tenga.
 					//Si tiene, se le muestra que tiene cita, que se acerque al colegio, y salir.
 					//Si no, decirle que no tiene citas pendientes y salir
+					$result = $pagiClient->getData("DocIdEst", 5000, 6); //Crear archivo de constantes
+					$docIdEst = $result->getDigits();
+					$sql = "select COUNT(*) as CantidadCitaciones 
+							from Citacion c
+							inner join Estudiante e
+							on e.idEstudiante = c.Estudiante_idEstudiante
+							where c.Estudiante_idEstudiante = (select e1.idEstudiante 
+							from Estudiante e1 
+							where e1.numeroIdentificacion = ". $docIdEst .")
+							and c.numeroCitacion like '%ACAD%'";
+
+					$resultado = $mysqli->query($sql);
+
+					if($resultado->num_rows === 0) {
+						//No encontró nada, mostrar audio de que no tiene citaciones.
+						$pagiClient->streamFile("NoTieneCita","#");
+					} else {
+						$arrCantidad = $resultado->fetch_assoc();
+						$cantidadCitaciones = $arrCantidad['CantidadCitaciones'];
+						if($cantidadCitaciones >= 1){
+							//Al menos hay una cita, decirle que vaya
+							$pagiClient->streamFile("SiTieneCita","#");
+						} else {
+							//No tiene citaciones
+							$pagiClient->streamFile("NoTieneCita","#");
+						}
+					}
+
 				}
 			} else {
 				//Opción 3-1
