@@ -1,0 +1,4 @@
+En esta carpeta están los archivos de configuración de Asterisk para la app IVR.Los archivos que están en esta carpeta deben ser pegados en la carpeta:
+/etc/asterisk/
+
+Contienen las extensiones configuradas (extensions.conf), y los usuarios de VoIP que se pueden registrar en este servidor (sip.conf y pjsip.conf).
